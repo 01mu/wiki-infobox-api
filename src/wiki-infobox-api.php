@@ -1,23 +1,30 @@
 <?php
+/*
+ * wiki-infobox-api
+ * github.com/01mu
+ */
 
 class infobox_value
 {
-    private $key;
-    private $value;
+    public $key;
+    public $value;
 }
 
 class infobox
 {
     private $context;
     private $article;
-    private $infobox_raw;
-    private $infobox_arr;
 
-    public function infobox()
+    private $infobox_raw;
+    public $infobox_arr = array();
+
+    public function infobox($person)
     {
         $agent = 'wiki-infobox-api';
         $ctx = array("http" => array("header" => $agent));
         $this->context = stream_context_create($ctx);
+        $this->get_article($person);
+        $this->get_infobox();
     }
 
     public function get_article($person)
@@ -32,8 +39,6 @@ class infobox
         $wiki = json_decode($data, true);
 
         $this->article = $wiki['query']['pages'][0]['revisions'][0]['content'];
-
-        //echo $this->article;
     }
 
     public function get_infobox()
@@ -85,14 +90,40 @@ class infobox
         }
 
         $this->infobox_raw = substr($new_s, 0, $ibox_end);
-        $this->infobox_arr = $lines;
 
         for($i = 0; $i < count($lines); $i++)
         {
-            printf($lines[$i] . "\n");
+            if(!empty($lines[$i]))
+            {
+                $this->infobox_arr[] = $this->set_line($lines[$i]);
+            }
         }
     }
 
+    private function set_line($line)
+    {
+        $ia = new infobox_value();
+
+        $pos = strpos($line, '=');
+
+        $lsplit = substr($line, 0, $pos-1);
+        $rsplit = substr($line, $pos+1, strlen($line));
+
+        $lsplit[strpos($lsplit, '|')] = ' ';
+
+        $lsplit = trim($lsplit);
+        $rsplit = trim($rsplit);
+
+        if(!strlen($rsplit))
+        {
+            $rsplit = '[Empty]';
+        }
+
+        $ia->key = $lsplit;
+        $ia->value = $rsplit;
+
+        return $ia;
+    }
 
     private function i_arr_add($new_s, $last_start)
     {
